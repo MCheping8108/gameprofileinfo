@@ -20,7 +20,7 @@ class AboutPage extends StatelessWidget {
             SizedBox(height: 16),
             Text('作者：和平peaceful'),
             SizedBox(height: 8),
-            Text('github仓库地址：https://www.peacefuly.top'),
+            Text('github仓库地址：https://github.com/MCheping8108/gameprofileinfo'),
             SizedBox(height: 24),
             Text('感谢', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             Text('妮露API：https://www.nilou.moe'),
