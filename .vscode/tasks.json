@@ -1,0 +1,10 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "安装url_launcher依赖",
+			"command": "flutter pub get"
+		}
+	]
+}
