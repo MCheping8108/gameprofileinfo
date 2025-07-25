@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'about/about.dart';
+import 'about/license.dart' as local_license;
 // import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui';
@@ -306,6 +307,16 @@ class _MyHomePageState extends State<MyHomePage> {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const AboutPage()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.description),
+                title: const Text('软件声明'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const local_license.LicensePage()),
                   );
                 },
               ),

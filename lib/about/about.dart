@@ -14,9 +14,9 @@ class AboutPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('原神信息展示工具', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text('gameProfileInfo', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
-            Text('本软件用于展示原神账号基础信息、角色列表、世界探索进度等内容。'),
+            Text('本软件用于展示游戏玩家基础信息等多种内容，可能会有多个游戏的内容。'),
             SizedBox(height: 16),
             Text('作者：和平peaceful'),
             SizedBox(height: 8),
