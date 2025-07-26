@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'about/about.dart';
 import 'about/license.dart' as local_license;
+import 'settings/settings.dart';
 // import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui';
@@ -284,91 +285,123 @@ class _MyHomePageState extends State<MyHomePage> {
   //   }
   // }
 
+  double _fontSize = 16;
+  bool _isDarkMode = false;
+  Color _themeColor = Colors.deepPurple;
+
   @override
   Widget build(BuildContext context) {
+    final themeData = ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: _themeColor, brightness: _isDarkMode ? Brightness.dark : Brightness.light),
+      textTheme: Theme.of(context).textTheme.apply(
+        fontSizeFactor: _fontSize / 16,
+        bodyColor: _isDarkMode ? Colors.grey[200] : _themeColor,
+        displayColor: _isDarkMode ? Colors.grey[200] : _themeColor,
+      ),
+    );
     return RepaintBoundary(
       key: _boundaryKey,
-      child: Scaffold(
-        key: _scaffoldKey,
-        drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
+      child: Theme(
+        data: themeData,
+        child: Scaffold(
+          key: _scaffoldKey,
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: themeData.colorScheme.primary,
+                  ),
+                  child: const Text('菜单', style: TextStyle(color: Colors.white, fontSize: 24)),
                 ),
-                child: const Text('菜单', style: TextStyle(color: Colors.white, fontSize: 24)),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('设置'),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    final result = await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const SettingsPage()),
+                    );
+                    if (result is Map) {
+                      setState(() {
+                        _fontSize = result['fontSize'] ?? _fontSize;
+                        _isDarkMode = result['isDarkMode'] ?? _isDarkMode;
+                        _themeColor = result['themeColor'] ?? _themeColor;
+                      });
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('关于软件'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const AboutPage()),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.description),
+                  title: const Text('软件声明'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const local_license.LicensePage()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          appBar: AppBar(
+            backgroundColor: themeData.colorScheme.inversePrimary,
+            title: Text(widget.title),
+            leading: IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                _scaffoldKey.currentState?.openDrawer();
+              },
+            ),
+          ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _uidController,
+                        decoration: const InputDecoration(labelText: 'UID'),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _serverController,
+                        decoration: const InputDecoration(labelText: '服务器(如 cn_gf01)'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: isLoading ? null : fetchAndSaveBasicInfo,
+                      child: const Text('获取/更新/保存'),
+                    ),
+                  ],
+                ),
               ),
-              ListTile(
-                leading: const Icon(Icons.info_outline),
-                title: const Text('关于软件'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const AboutPage()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: const Text('软件声明'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const local_license.LicensePage()),
-                  );
-                },
+              Expanded(
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorMsg != null
+                        ? Center(child: Text(errorMsg!))
+                        : buildBasicInfoView(),
               ),
             ],
           ),
-        ),
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          title: Text(widget.title),
-          leading: IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              _scaffoldKey.currentState?.openDrawer();
-            },
-          ),
-        ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _uidController,
-                      decoration: const InputDecoration(labelText: 'UID'),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _serverController,
-                      decoration: const InputDecoration(labelText: '服务器(如 cn_gf01)'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: isLoading ? null : fetchAndSaveBasicInfo,
-                    child: const Text('获取/更新/保存'),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : errorMsg != null
-                      ? Center(child: Text(errorMsg!))
-                      : buildBasicInfoView(),
-            ),
-          ],
         ),
       ),
     );
