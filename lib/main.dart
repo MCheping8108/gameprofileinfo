@@ -104,6 +104,75 @@ class GenshinStats {
     );
   }
 }
+
+// 深渊信息数据类
+class AbyssInfo {
+  final int totalBattleTimes;
+  final int totalWinTimes;
+  final String maxFloor;
+  final int totalStar;
+  final List<dynamic> revealRank;
+  final List<dynamic> defeatRank;
+  final List<dynamic> damageRank;
+  final List<dynamic> takeDamageRank;
+  final List<dynamic> normalSkillRank;
+  final List<dynamic> energySkillRank;
+  final List<dynamic> floors;
+  AbyssInfo({
+    required this.totalBattleTimes,
+    required this.totalWinTimes,
+    required this.maxFloor,
+    required this.totalStar,
+    required this.revealRank,
+    required this.defeatRank,
+    required this.damageRank,
+    required this.takeDamageRank,
+    required this.normalSkillRank,
+    required this.energySkillRank,
+    required this.floors,
+  });
+  factory AbyssInfo.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? json;
+    return AbyssInfo(
+      totalBattleTimes: data['total_battle_times'] ?? 0,
+      totalWinTimes: data['total_win_times'] ?? 0,
+      maxFloor: data['max_floor'] ?? '',
+      totalStar: data['total_star'] ?? 0,
+      revealRank: data['reveal_rank'] ?? [],
+      defeatRank: data['defeat_rank'] ?? [],
+      damageRank: data['damage_rank'] ?? [],
+      takeDamageRank: data['take_damage_rank'] ?? [],
+      normalSkillRank: data['normal_skill_rank'] ?? [],
+      energySkillRank: data['energy_skill_rank'] ?? [],
+      floors: data['floors'] ?? [],
+    );
+  }
+}
+
+  Future<AbyssInfo?> loadAbyssInfo({String? uid, String? server, int type = 1}) async {
+    // 优先API获取，失败则尝试本地文件
+    if (uid != null && server != null && uid.isNotEmpty && server.isNotEmpty) {
+      try {
+        final url = 'https://api.nilou.moe/v1/bbs/genshin/AbyssInfo?uid=$uid&server=$server&type=$type';
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonMap = json.decode(response.body);
+          return AbyssInfo.fromJson(jsonMap);
+        }
+      } catch (e) {}
+    }
+    // 本地文件兜底
+    try {
+      final file = File('c:/Users/liuyi/Downloads/AbyssInfo.json');
+      if (await file.exists()) {
+        final jsonStr = await file.readAsString();
+        final Map<String, dynamic> jsonMap = json.decode(jsonStr);
+        return AbyssInfo.fromJson(jsonMap);
+      }
+    } catch (e) {}
+    return null;
+  }
+
 void main() {
   runApp(const MyApp());
 }
@@ -152,6 +221,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Map<String, dynamic>? basicInfo;
   bool isLoading = true;
   String? errorMsg;
+  AbyssInfo? abyssInfo;
+  bool abyssLoading = true;
+  int abyssType = 1; // 1: 本期, 2: 上期
 
   final TextEditingController _uidController = TextEditingController();
   final TextEditingController _serverController = TextEditingController();
@@ -171,6 +243,13 @@ class _MyHomePageState extends State<MyHomePage> {
       showAlert('使用前确保对方是否开启了“在个人中心是否展示角色战绩”\n请输入你的原神UID和服务器（如cn_gf01），点击“获取/保存”即可获取并保存你的游戏信息。\n\n服务器常用：\n国服官服：cn_gf01\n国服B服：cn_qd01\n国际服：os_usa、os_euro、os_asia、os_cht');
     });
     _loadUserPrefs().then((_) => loadBasicInfo());
+    // 初始加载本地深渊信息
+    loadAbyssInfo(type: abyssType).then((info) {
+      setState(() {
+        abyssInfo = info;
+        abyssLoading = false;
+      });
+    });
   }
 
   Future<void> _loadUserPrefs() async {
@@ -235,11 +314,18 @@ class _MyHomePageState extends State<MyHomePage> {
           basicInfo = jsonMap['data'] ?? jsonMap;
           isLoading = false;
         });
+        // 获取深渊信息
+        setState(() { abyssLoading = true; });
+        final abyss = await loadAbyssInfo(uid: uid, server: server, type: abyssType);
+        setState(() {
+          abyssInfo = abyss;
+          abyssLoading = false;
+        });
       } else {
-      setState(() {
-        errorMsg = 'API请求失败: ${response.statusCode}';
-        isLoading = false;
-      });
+        setState(() {
+          errorMsg = 'API请求失败: ${response.statusCode}';
+          isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
@@ -481,6 +567,149 @@ class _MyHomePageState extends State<MyHomePage> {
                     _statItem("满好感角色数", stats.fullFetterAvatarNum),
                     _statItem("困难挑战", stats.hardChallengeName),
                     _statItem("挑战难度", stats.hardChallengeDifficulty),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          // 深渊类型选择
+          Row(
+            children: [
+              const Text("深渊类型：", style: TextStyle(fontWeight: FontWeight.bold)),
+              DropdownButton<int>(
+                value: abyssType,
+                items: const [
+                  DropdownMenuItem(value: 1, child: Text("本期深渊")),
+                  DropdownMenuItem(value: 2, child: Text("上期深渊")),
+                ],
+                onChanged: (v) async {
+                  if (v == null) return;
+                  setState(() { abyssType = v; abyssLoading = true; });
+                  final uid = _uidController.text.trim();
+                  final server = _serverController.text.trim();
+                  final abyss = await loadAbyssInfo(uid: uid, server: server, type: abyssType);
+                  setState(() {
+                    abyssInfo = abyss;
+                    abyssLoading = false;
+                  });
+                },
+              ),
+            ],
+          ),
+          // 深渊信息卡片
+          if (!abyssLoading && abyssInfo != null) ...[
+            const Text("深渊信息:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("最大层数: ${abyssInfo!.maxFloor}", style: const TextStyle(fontSize: 16)),
+                    Text("总星数: ${abyssInfo!.totalStar}", style: const TextStyle(fontSize: 16)),
+                    Text("总战斗次数: ${abyssInfo!.totalBattleTimes}", style: const TextStyle(fontSize: 16)),
+                    Text("总胜利次数: ${abyssInfo!.totalWinTimes}", style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 12),
+                    Text("出场排行:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Wrap(spacing: 12, children: abyssInfo!.revealRank.map<Widget>((item) => Column(
+                      children: [
+                        CircleAvatar(backgroundImage: NetworkImage(item['avatar_icon']), radius: 20),
+                        Text("${item['value']}次", style: const TextStyle(fontSize: 12)),
+                      ],
+                    )).toList()),
+                    const SizedBox(height: 8),
+                    Text("击败排行:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Wrap(spacing: 12, children: abyssInfo!.defeatRank.map<Widget>((item) => Column(
+                      children: [
+                        CircleAvatar(backgroundImage: NetworkImage(item['avatar_icon']), radius: 20),
+                        Text("${item['value']}次", style: const TextStyle(fontSize: 12)),
+                      ],
+                    )).toList()),
+                    const SizedBox(height: 8),
+                    Text("伤害排行:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Wrap(spacing: 12, children: abyssInfo!.damageRank.map<Widget>((item) => Column(
+                      children: [
+                        CircleAvatar(backgroundImage: NetworkImage(item['avatar_icon']), radius: 20),
+                        Text("${item['value']}", style: const TextStyle(fontSize: 12)),
+                      ],
+                    )).toList()),
+                    const SizedBox(height: 8),
+                    Text("受伤排行:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Wrap(spacing: 12, children: abyssInfo!.takeDamageRank.map<Widget>((item) => Column(
+                      children: [
+                        CircleAvatar(backgroundImage: NetworkImage(item['avatar_icon']), radius: 20),
+                        Text("${item['value']}", style: const TextStyle(fontSize: 12)),
+                      ],
+                    )).toList()),
+                    const SizedBox(height: 8),
+                    Text("技能释放排行:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Wrap(spacing: 12, children: [
+                      ...abyssInfo!.normalSkillRank.map<Widget>((item) => Column(
+                        children: [
+                          CircleAvatar(backgroundImage: NetworkImage(item['avatar_icon']), radius: 20),
+                          Text("普攻:${item['value']}", style: const TextStyle(fontSize: 12)),
+                        ],
+                      )),
+                      ...abyssInfo!.energySkillRank.map<Widget>((item) => Column(
+                        children: [
+                          CircleAvatar(backgroundImage: NetworkImage(item['avatar_icon']), radius: 20),
+                          Text("大招:${item['value']}", style: const TextStyle(fontSize: 12)),
+                        ],
+                      )),
+                    ]),
+                    const SizedBox(height: 12),
+                    Text("各层怪物分布:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...abyssInfo!.floors.map<Widget>((floor) {
+                      final index = floor['index'] ?? '';
+                      final star = floor['star'] ?? 0;
+                      final maxStar = floor['max_star'] ?? 0;
+                      final levels = floor['levels'] ?? [];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("第${index}层 (${star}/${maxStar}星)", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                ...levels.map<Widget>((level) {
+                                  final idx = level['index'] ?? '';
+                                  final top = level['top_half_floor_monster'] ?? [];
+                                  final bottom = level['bottom_half_floor_monster'] ?? [];
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 2),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("第${idx}间上半:", style: const TextStyle(fontSize: 13)),
+                                        Wrap(spacing: 8, children: top.map<Widget>((m) => Column(
+                                          children: [
+                                            if (m['icon'] != null && m['icon'].toString().isNotEmpty)
+                                              CircleAvatar(backgroundImage: NetworkImage(m['icon']), radius: 16)
+                                          ],
+                                        )).toList()),
+                                        Text("第${idx}间下半:", style: const TextStyle(fontSize: 13)),
+                                        Wrap(spacing: 8, children: bottom.map<Widget>((m) => Column(
+                                          children: [
+                                            if (m['icon'] != null && m['icon'].toString().isNotEmpty)
+                                              CircleAvatar(backgroundImage: NetworkImage(m['icon']), radius: 16)
+                                          ],
+                                        )).toList()),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
               ),

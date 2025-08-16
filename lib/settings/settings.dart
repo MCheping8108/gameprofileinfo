@@ -15,91 +15,104 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
+    final themeData = ThemeData(
+      brightness: _isDarkMode ? Brightness.dark : Brightness.light,
+      primaryColor: _themeColor,
+      colorScheme: (_isDarkMode
+          ? ColorScheme.dark(primary: _themeColor)
+          : ColorScheme.light(primary: _themeColor)),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: _themeColor,
+        thumbColor: _themeColor,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                children: [
-                  ListTile(
-                    title: const Text('字体大小'),
-                    subtitle: Slider(
-                      min: 12,
-                      max: 28,
-                      divisions: 8,
-                      value: _fontSize,
-                      label: _fontSize.toStringAsFixed(0),
+    );
+    return Theme(
+      data: themeData,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('设置'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  children: [
+                    ListTile(
+                      title: const Text('字体大小'),
+                      subtitle: Slider(
+                        min: 12,
+                        max: 28,
+                        divisions: 8,
+                        value: _fontSize,
+                        label: _fontSize.toStringAsFixed(0),
+                        onChanged: (v) {
+                          setState(() { _fontSize = v; });
+                        },
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('暗黑模式'),
+                      value: _isDarkMode,
                       onChanged: (v) {
-                        setState(() { _fontSize = v; });
+                        setState(() { _isDarkMode = v; });
                       },
                     ),
-                  ),
-                  SwitchListTile(
-                    title: const Text('暗黑模式'),
-                    value: _isDarkMode,
-                    onChanged: (v) {
-                      setState(() { _isDarkMode = v; });
-                      
-                    },
-                  ),
-                  ListTile(
-                    title: const Text('主题色'),
-                    subtitle: Row(
-                      children: [
-                        _colorCircle(Colors.deepPurple),
-                        _colorCircle(Colors.blue),
-                        _colorCircle(Colors.green),
-                        _colorCircle(Colors.orange),
-                        _colorCircle(Colors.red),
-                      ],
+                    ListTile(
+                      title: const Text('主题色'),
+                      subtitle: Row(
+                        children: [
+                          _colorCircle(Colors.deepPurple),
+                          _colorCircle(Colors.blue),
+                          _colorCircle(Colors.green),
+                          _colorCircle(Colors.orange),
+                          _colorCircle(Colors.red),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      '预览效果',
+                      style: TextStyle(
+                        fontSize: _fontSize,
+                        color: _isDarkMode ? Colors.grey[200] : _themeColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop({
+                          'fontSize': _fontSize,
+                          'isDarkMode': _isDarkMode,
+                          'themeColor': _themeColor,
+                        });
+                      },
+                      child: const Text('保存并应用'),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    '预览效果',
-                    style: TextStyle(
-                      fontSize: _fontSize,
-                      color: _isDarkMode ? Colors.grey[200] : _themeColor,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _fontSize = 16;
+                          _isDarkMode = false;
+                          _themeColor = Colors.deepPurple;
+                        });
+                      },
+                      child: const Text('重置为默认'),
                     ),
                   ),
                 ],
               ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop({
-                        'fontSize': _fontSize,
-                        'isDarkMode': _isDarkMode,
-                        'themeColor': _themeColor,
-                      });
-                    },
-                    child: const Text('保存并应用'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _fontSize = 16;
-                        _isDarkMode = false;
-                        _themeColor = Colors.deepPurple;
-                      });
-                    },
-                    child: const Text('重置为默认'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
